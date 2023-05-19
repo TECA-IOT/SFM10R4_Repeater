@@ -44,7 +44,9 @@ String str_bufferRx;
 uint8_t hexBuffer[12];    //contiene los hex ya convertidos en bytes numerico  
 uint32_t id;               //id del dispositivo
 uint32_t Nro_elementos=0;
+
 void Restransmision_Data(String dataHex);
+void setup_wifi();
 
 void setup() {
   pinMode(btn,INPUT);
@@ -54,15 +56,6 @@ void setup() {
   wisol.begin(9600);
   Serial2.begin(9600);
 
-  WiFi.begin(ssid, password);
-  Serial.println("Conectando a WiFi");
-  while(WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-  }
-  Serial.println("");
-  Serial.print("Conectado a WiFi con IP: ");
-  Serial.println(WiFi.localIP());
 
   wisol.RST();
   delay(5000);
@@ -77,6 +70,8 @@ void setup() {
      Serial.println(id_local_device_registre[i],HEX); //muestra toda la lista      
   }
   
+  setup_wifi();
+
   //while(!Serial);  //comentar si usará una fuente de energía externa
 CMD_flag=1;
 Serial2.setTimeout(100);
@@ -89,6 +84,13 @@ void loop() {
      //rec = wisol.command2("AT$RL"); 
      //Serial.print("recibido: ");
      //Serial.println(rec);
+
+     if(WiFi.status()== WL_CONNECTED){
+       /*todo*/
+     }else{
+       setup_wifi();
+     }
+
      if(CMD_flag==1){
         sprintf(rxdata,"AT$RL\r\n");
         Serial2.print(rxdata); //print uart 2 (Sigfox module)
@@ -173,7 +175,7 @@ void Restransmision_Data(String dataHex){
     String output="";
     serializeJson(doc, output);
     Serial.println(output);
-    
+
     int httpResponseCode = http.POST(output);
     Serial.print("HTTP Response code: ");
     Serial.println(httpResponseCode);
@@ -185,12 +187,15 @@ void Restransmision_Data(String dataHex){
         String payload = http.getString();
         Serial.println(payload);
         }
+        Serial.println("[RETRANSMISION OK]");   
     }else {
       Serial.printf("[HTTP]POST... failed, error: %s\n", http.errorToString(httpResponseCode).c_str());
+      Serial.println("[RETRANSMISION ERROR]");
     }
     http.end();
   }else{
-    Serial.println("WiFi Desconectado");
+    Serial.print("[WiFi Desconectado] ");
+    Serial.println("[RETRANSMISION ERROR]");
   }
 
   // Serial2.print(rxdata); //print uart 2 (Sigfox module)
@@ -199,6 +204,30 @@ void Restransmision_Data(String dataHex){
   // Serial2.begin(9600);
   
   //  //Serial.print(wisol.SEND(dataHex)); //retransmitir mensaje a red Sigfox
-    Serial.println("[RETRANSMISION OK]");      
+       
     digitalWrite(RXLED,LOW);   
+}
+
+void setup_wifi() {
+
+  delay(10);
+  // We start by connecting to a WiFi network
+  Serial.println();
+  Serial.print("Connecting to ");
+  Serial.println(ssid);
+
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+
+  randomSeed(micros());
+
+  Serial.println("");
+  Serial.println("WiFi connected");
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
 }
