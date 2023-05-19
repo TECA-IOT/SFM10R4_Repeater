@@ -1,3 +1,6 @@
+#include <ArduinoJson.h>
+#include <ArduinoJson.hpp>
+
 /*
 Se emplea ESP32 DOIT DEVKIT y Modulo de Comunicación TINYFOX
 La comunicación con el modulo RF es vía UART2 a 9600 baudios
@@ -8,16 +11,22 @@ La comunicación con el modulo RF es vía UART2 a 9600 baudios
 #include "decode_hex.h"
 #include <stdio.h>
 #include <string.h>
+#include <WiFi.h>
+#include <HTTPClient.h>
+
+
+const char* ssid = "marcou";
+const char* password = "12345678";
+const char* serverName = "http://back2.teca.pe/SFM_repeater";
 
 
 /*****Registrar ID de dispositivos a retransmitir (ID en formato hexadecimal***********/
 uint32_t id_local_device_registre[]={0x3fb4f1,0x82EFB1,0x830FAB,0x82ed6f,0x831198,0x44973F}; 
 /***************************************************************************************/
 
-
+unsigned long lastTime = 0;
 #define BUFFER_SIZE        36
 char rxdata[BUFFER_SIZE]={0};//inicializar bufer rxdata con todos los valores a 0
-
 #define btn   13
 //#define RXLED  17  //ufox
 #define RXLED  2    //esp32
@@ -25,14 +34,10 @@ char buff[30]="";
 long lastMsg_=0;
 char  caracter_ =0x00;
 bool CMD_flag=0;
-
 /*Constructor Libreria Tinyfox*/
 //Tiny<HardwareSerial,Serial_> wisol(&Serial1,&Serial,12,false);//leonardo (ufox)
 Tiny<HardwareSerial,HardwareSerial> wisol(&Serial2,&Serial,4);//esp32&Tinyfox, gpio4 como pin reset
-
-
 /*Global Variables*/
-
 char bufferRx[24];        //almacena los datos recibidos en cadena de caracteres
 String rec;
 String str_bufferRx;
@@ -48,6 +53,16 @@ void setup() {
   Serial.begin(115200);
   wisol.begin(9600);
   Serial2.begin(9600);
+
+  WiFi.begin(ssid, password);
+  Serial.println("Conectando a WiFi");
+  while(WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("");
+  Serial.print("Conectado a WiFi con IP: ");
+  Serial.println(WiFi.localIP());
 
   wisol.RST();
   delay(5000);
@@ -133,7 +148,7 @@ void loop() {
 void Restransmision_Data(String dataHex){
    wisol.RST();
    digitalWrite(RXLED,HIGH);
-   Serial2.print("AT$RC\n\r"); //print uart 2 (Sigfox module)
+   //Serial2.print("AT$RC\n\r"); //print uart 2 (Sigfox module)
    delay(50);
 
   // Serial.print("here_: "); Serial.println(dataHex);  
@@ -141,15 +156,49 @@ void Restransmision_Data(String dataHex){
   dataHex.replace("\n", "");
   dataHex.replace("\r", "");
    //Serial.println(dataHex.length());
-   Serial.print(String(dataHex));  Serial.print(" ");    
-
-  sprintf(rxdata,"AT$SF=%s\n\r",dataHex.c_str());
-  Serial2.print(rxdata); //print uart 2 (Sigfox module)
-  Serial2.end();
-  delay(3500);
-  Serial2.begin(9600);
+  Serial.print(String(dataHex));  Serial.print(" ");    
+  //sprintf(rxdata,"AT$SF=%s\n\r",dataHex.c_str());
   
-   //Serial.print(wisol.SEND(dataHex)); //retransmitir mensaje a red Sigfox
-   Serial.println("[RETRANSMISION OK]");      
-   digitalWrite(RXLED,LOW);   
+  if(WiFi.status()== WL_CONNECTED){
+    HTTPClient http;
+    http.begin(serverName);
+    http.addHeader("Content-Type", "application/json");
+    //Lectura de Sensores  
+    String dat = String(random(20,25));  //simular sensores
+    String humedad = String(random(80,95)); //simular sensores
+    String ID_device = "ESP-0001"; // 
+
+    StaticJsonDocument<64> doc;
+    doc["data"] = dataHex;
+    String output="";
+    serializeJson(doc, output);
+    Serial.println(output);
+    
+    int httpResponseCode = http.POST(output);
+    Serial.print("HTTP Response code: ");
+    Serial.println(httpResponseCode);
+    if(httpResponseCode > 0) { //respuesta de servidor
+      // HTTP header has been send and Server response header has been handled
+      Serial.printf("[HTTP] POST... code: %d\n", httpResponseCode);
+      // file found at server
+      if(httpResponseCode == HTTP_CODE_OK) {
+        String payload = http.getString();
+        Serial.println(payload);
+        }
+    }else {
+      Serial.printf("[HTTP]POST... failed, error: %s\n", http.errorToString(httpResponseCode).c_str());
+    }
+    http.end();
+  }else{
+    Serial.println("WiFi Desconectado");
+  }
+
+  // Serial2.print(rxdata); //print uart 2 (Sigfox module)
+  // Serial2.end();
+  // delay(3500);
+  // Serial2.begin(9600);
+  
+  //  //Serial.print(wisol.SEND(dataHex)); //retransmitir mensaje a red Sigfox
+    Serial.println("[RETRANSMISION OK]");      
+    digitalWrite(RXLED,LOW);   
 }
