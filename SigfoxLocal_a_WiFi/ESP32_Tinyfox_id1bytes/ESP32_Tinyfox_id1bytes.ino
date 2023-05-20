@@ -21,7 +21,7 @@ const char* serverName = "http://back2.teca.pe/SFM_repeater";
 
 
 /*****Registrar ID de dispositivos a retransmitir (ID en formato hexadecimal***********/
-uint32_t id_local_device_registre[]={0x3fb4f1,0x82EFB1,0x830FAB,0x82ed6f,0x831198,0x44973F}; 
+uint32_t id_local_device_registre[]={0x01}; 
 /***************************************************************************************/
 
 unsigned long lastTime = 0;
@@ -119,7 +119,7 @@ void loop() {
         // Serial.print("here"); Serial.print(rec);
         // Serial.print("here"); Serial.println(String(bufferRx));
 
-        id = GET_UINT32(hexBuffer, BYTE8); //empezar a decodificar la data
+        id = GET_UINT8(hexBuffer, BYTE9); //empezar a decodificar la data
         int flag_reg=0;
         // Serial.print("here: "); Serial.println(str_bufferRx);
         // Serial.print("here: "); Serial.print(rec);
