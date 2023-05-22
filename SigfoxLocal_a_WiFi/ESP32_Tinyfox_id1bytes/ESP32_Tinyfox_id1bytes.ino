@@ -21,7 +21,7 @@ const char* serverName = "http://back2.teca.pe/SFM_repeater";
 
 
 /*****Registrar ID de dispositivos a retransmitir (ID en formato hexadecimal***********/
-uint32_t id_local_device_registre[]={0x01}; 
+uint32_t id_local_device_registre[]={0x02}; 
 /***************************************************************************************/
 
 unsigned long lastTime = 0;
