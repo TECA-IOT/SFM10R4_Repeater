@@ -24,7 +24,7 @@ Ufox wisol;
 
 /*Global Variables*/
 //ID DE DISPOSITIVOS AGREGADOS A LA RED
- static const uint32_t id_local_device_registre[] ={0x2313db,0x831cdb,0x8313ab,0x8313db,0x2313db,0x831cdb,0x8313ab,0x8313db,0x2313db,0x831cdb,0x8313ab,0x8313db,0x2313db,0x831cdb,0x8313ab,0x8313db,0x2313db,0x831cdb,0x8313ab,0x2313db,0x831cdb,0x8313ab,0x8313db,0x2313db,0x831cdb,0x8313ab,0x8313db,0x2313db,0x831cdb,0x8313ab,0x8313db,0x44973f,0x82ED6F}; 
+ static const uint32_t id_local_device_registre[] ={0x8313ab,0x8313db,0x2313db,0x831cdb,0x8313ab,0x8313db,0x2313db,0x831cdb,0x8313ab,0x8313db,0x2313db,0x831cdb,0x8313ab,0x2313db,0x831cdb,0x8313ab,0x8313db,0x2313db,0x831cdb,0x8313ab,0x8313db,0x2313db,0x831cdb,0x8313ab,0x8313db,0x44973f,0x82ED6F}; 
 
 
 
@@ -87,6 +87,7 @@ static const char server[]   = "back2.teca.pe";
 static const char resource[]  = "/SFM_repeater";
 static const uint8_t  port       = 80;
 
+
 #include <TinyGsmClient.h>
 //#include <ArduinoHttpClient.h>
 
@@ -120,6 +121,7 @@ void setup() {
   wisol.begin(9600);   //Serial MODEM SIGFOX 
   digitalWrite(RXLED,HIGH);
   wisol.RST();
+  
   delay(5000);
    digitalWrite(RXLED,LOW);
    SerialMon.println("");
@@ -161,7 +163,7 @@ void setup() {
   SerialMon.println(F(" OK"));
   if (modem.isNetworkConnected()) { SerialMon.println(F("[NETWRK CONN]")); }
   // GPRS connection parameters are usually set after network registration
-  SerialMon.print(F("[APN]  ")); SerialMon.print(apn);
+  SerialMon.print(F("[APN]")); SerialMon.print(apn);
   //if (!modem.gprsConnect(apn, gprsUser, gprsPass)) {
     if (!modem.gprsConnect(apn)) {
     SerialMon.println(F("[err GPRS]"));
@@ -182,8 +184,8 @@ delay(2000);
   SerialAT.print(F("AT+HTTPPARA=\"URL\",\"back2.teca.pe/SFM_repeater\"\r\n"));
   SerialMon.print(F("AT+HTTPPARA=\"URL\",\"back2.teca.pe/SFM_repeater\"\r\n"));
   delay(25);
-  //SerialAT.print(F("AT+HTTPPARA=\"CONTENT\",\"application/json\"\r\n"));
-  //SerialMon.print(F("AT+HTTPPARA=\"CONTENT\",\"application/json\"\r\n"));
+  SerialAT.print(F("AT+HTTPPARA=\"CONTENT\",\"application/json\"\r\n"));
+  SerialMon.print(F("AT+HTTPPARA=\"CONTENT\",\"application/json\"\r\n"));
   delay(25);
 
 
@@ -191,12 +193,12 @@ delay(2000);
 
 void loop() {
 
-   String rec = wisol.command("AT$RL"); 
+   String rec = wisol.command(F("AT$RL")); 
    //String rec ;
    //Serial.print("recibido: ");
    //Serial.println(rec);
    
-   if(rec.length() > 4){
+   if(rec.length() > 5){
       char bufferRx[24];        //almacena los datos recibidos en cadena de caracteres     
       uint8_t hexBuffer[12];    //contiene los hex ya convertidos en bytes numerico  
       String str_bufferRx;
@@ -243,21 +245,29 @@ void Restransmision_Data(String dataHex){
   //SerialMon.println(F("HTTP REQ..."));
   wisol.RST();
   String sfm_id = wisol.ID();
+  sfm_id.remove(sfm_id.length()-1);
+  uint8_t nbyets_=sfm_id.length();
+  //SerialMon.print(F("Nro bytes id: ")); SerialMon.println(nbyets_);
 
   //dataHex = "{\"idRep\":\"00346738\",\"data\":\"" + dataHex + "\"}\r\n";
-   dataHex = "{\"idRep\":\""+ String(sfm_id)+"\",\"data\":\""+dataHex+"\"}\r\n";
-  //sizeof(dataHex);
-  SerialMon.print(F("Nro bytes: ")); SerialMon.println(dataHex.length());
+  //dataHex = "{'idRep':'00346738','data':'" + dataHex + "'}\r\n";
+   dataHex = "{\"idRep\":\""+ sfm_id+"\",\"data\":\""+dataHex+"\"}\r\n";
+   uint8_t nbyets=dataHex.length();
+  //SerialMon.print(F("Nro bytes: ")); SerialMon.println(nbyets);
 
-  SerialAT.print(F("AT+HTTPDATA=56,10000\r\n"));
-  SerialMon.print(F("AT+HTTPDATA=56,10000\r\n"));
+  String len="AT+HTTPDATA=" + String(nbyets) + ",10000\r\n" ;
+  
+  //SerialAT.print(F("AT+HTTPDATA=56,10000\r\n"));
+  //SerialMon.print(F("AT+HTTPDATA=56,10000\r\n"));
+  SerialAT.print(len);
+  SerialMon.print(len);
   delay(25);
   SerialAT.print(dataHex);
   SerialMon.print(dataHex);
   delay(25);
   SerialAT.print(F("AT+HTTPACTION=1\r\n"));
   SerialMon.print(F("AT+HTTPACTION=1\r\n"));
-  delay(2000);
+  delay(1000);
   //SerialAT.print(F("AT+HTTPREAD\r\n"));
   //SerialMon.print(F("AT+HTTPREAD\r\n"));
   //delay(3000);
