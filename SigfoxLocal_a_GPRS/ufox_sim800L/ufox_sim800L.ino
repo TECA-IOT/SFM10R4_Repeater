@@ -111,6 +111,7 @@ TinyGsm        modem(SerialAT);
 TinyGsmClient client(modem);
 
 void Restransmision_Data(String dataHex);
+void(* resetSoftware)(void) = 0;
 
 void setup() {
   // Set console baud rate
@@ -151,13 +152,16 @@ void setup() {
 
   //String modemInfo = 
   //SerialMon.print(F("MODEM: "));
+  digitalWrite(RXLED,LOW);
   SerialMon.println(modem.getModemInfo());
 
   modem.gprsConnect(apn, gprsUser, gprsPass);
    SerialMon.print(F("[WAIT NTWRK] "));
-  if (!modem.waitForNetwork(600000L)) {
+  if (!modem.waitForNetwork(240000L)) {
     SerialMon.println(F("[NO NTWRK]"));
     delay(10000);
+    //digitalWrite(RXLED,HIGH);
+    resetSoftware();
     return;
   }
   SerialMon.println(F(" OK"));
@@ -168,6 +172,8 @@ void setup() {
     if (!modem.gprsConnect(apn)) {
     SerialMon.println(F("[err GPRS]"));
     delay(10000);
+    //digitalWrite(RXLED,HIGH);
+    resetSoftware();
     return;
   }
   SerialMon.println(F(" OK"));
@@ -187,7 +193,7 @@ delay(2000);
   SerialAT.print(F("AT+HTTPPARA=\"CONTENT\",\"application/json\"\r\n"));
   SerialMon.print(F("AT+HTTPPARA=\"CONTENT\",\"application/json\"\r\n"));
   delay(25);
-
+  digitalWrite(RXLED,HIGH);
 
 }
 
@@ -244,7 +250,7 @@ void Restransmision_Data(String dataHex){
 
   //SerialMon.println(F("HTTP REQ..."));
   wisol.RST();
-  digitalWrite(RXLED,HIGH);
+  digitalWrite(RXLED,LOW);
   String sfm_id = wisol.ID();
   sfm_id.remove(sfm_id.length()-1);
   uint8_t nbyets_=sfm_id.length();
@@ -276,7 +282,7 @@ void Restransmision_Data(String dataHex){
   //SerialMon.print("AT+HTTPTERM\r\n");
   //SerialAT.flush();
   SerialMon.println();
-  digitalWrite(RXLED,LOW);
+  digitalWrite(RXLED,HIGH);
 
 }
 
