@@ -244,6 +244,7 @@ void Restransmision_Data(String dataHex){
 
   //SerialMon.println(F("HTTP REQ..."));
   wisol.RST();
+  digitalWrite(RXLED,HIGH);
   String sfm_id = wisol.ID();
   sfm_id.remove(sfm_id.length()-1);
   uint8_t nbyets_=sfm_id.length();
@@ -275,6 +276,7 @@ void Restransmision_Data(String dataHex){
   //SerialMon.print("AT+HTTPTERM\r\n");
   //SerialAT.flush();
   SerialMon.println();
+  digitalWrite(RXLED,LOW);
 
 }
 
