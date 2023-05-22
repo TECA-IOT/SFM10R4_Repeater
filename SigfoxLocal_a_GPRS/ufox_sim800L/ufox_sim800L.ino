@@ -267,7 +267,7 @@ void Restransmision_Data(String dataHex){
   delay(25);
   SerialAT.print(F("AT+HTTPACTION=1\r\n"));
   SerialMon.print(F("AT+HTTPACTION=1\r\n"));
-  delay(1000);
+  delay(2000);
   //SerialAT.print(F("AT+HTTPREAD\r\n"));
   //SerialMon.print(F("AT+HTTPREAD\r\n"));
   //delay(3000);
