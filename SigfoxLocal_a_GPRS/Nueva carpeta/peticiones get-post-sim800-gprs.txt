@@ -1,0 +1,44 @@
+#PRIMERO CONEXION TCP/IP AL SERVIDOR APUNTANDI AL DOMINIO O IP
+AT+CIPSTART="TCP","ec2-50-19-173-144.compute-1.amazonaws.com",1880
+
+
+//PETICION GET
+AT+CIPSEND
+GET /sim800?var1=123&var2="sim800ok"&ID="sim-001" HTTP/1.1
+Host: ec2-50-19-173-144.compute-1.amazonaws.com
+[PRESIONAR ENTER]
+   //0x0D ; 0x0A : \r\n  //salto de linea retorno de carro
+
+
+
+//#PETICION POST - tipo FORMULARIO (FORM)
+AT+CIPSTART="TCP","ec2-50-19-173-144.compute-1.amazonaws.com",1880
+AT+CIPSEND
+
+POST /sim800_post HTTP/1.1
+Host: ec2-50-19-173-144.compute-1.amazonaws.com
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 31
+User-Agent: Sim800_prueba
+Accept-Encoding: gzip, deflate, br
+Connection: keep-alive
+[PRESIONAR ENTER]
+nombre=marco&apellido=caballero
+   //0x0D ; 0x0A : \r\n  //salto de linea retorno de carro
+
+
+
+//##PETICION POST - JSON
+AT+CIPSTART="TCP","ec2-50-19-173-144.compute-1.amazonaws.com",1880
+AT+CIPSEND
+
+POST /sim800_post HTTP/1.1
+Host: ec2-50-19-173-144.compute-1.amazonaws.com
+Content-Type: application/json
+Content-Length: 56
+User-Agent: Sim800_prueba
+Accept-Encoding: gzip, deflate, br
+Connection: close
+[PRESIONAR ENTER]
+{"nombre":"marco","apellido":"caballero","dni":46818835}
+   //0x0D ; 0x0A : \r\n  //salto de linea retorno de carro

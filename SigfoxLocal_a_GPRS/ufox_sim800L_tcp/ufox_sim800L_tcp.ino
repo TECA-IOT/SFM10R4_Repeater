@@ -24,7 +24,7 @@ Ufox wisol;
 
 /*Global Variables*/
 //ID DE DISPOSITIVOS AGREGADOS A LA RED
- static const uint32_t id_local_device_registre[] ={0x008313ab,0x008313c4}; 
+ static const uint32_t id_local_device_registre[] ={0x008313ab,0x008313c4,0x007FF3EF, 0x3faecb,0x003faf4f, 0x00449671, 0x008311D1,0x8300cf, 0x00830951,0x00830d6c,0x00830d6c,0x00830505 }; 
 
 
 
@@ -110,8 +110,28 @@ TinyGsm        modem(SerialAT);
 
 TinyGsmClient client(modem);
 
-void Restransmision_Data(String dataHex);
+void Restransmision_Data_http(String dataHex);
+void Restransmision_Data_tcp(String dataHex);
+
+
 void(* resetSoftware)(void) = 0;
+void ledazul(bool estado){
+if(estado==true){
+  digitalWrite(RXLED, LOW);
+}else{
+  digitalWrite(RXLED, HIGH);
+  } 
+}
+
+void ledrojo(bool estado){
+if(estado==true){
+  TXLED1;
+}else{
+  TXLED0;
+  }  
+}
+
+
 
 void setup() {
   // Set console baud rate
@@ -119,30 +139,32 @@ void setup() {
   SerialMon.begin(19200); //Serial USER MONITORING
   pinMode(btn,INPUT);
   pinMode(RXLED,OUTPUT);
+  ledrojo(true);
+  ledrojo(true);
+  wisol.RST();
   wisol.begin(9600);   //Serial MODEM SIGFOX 
-  digitalWrite(RXLED,HIGH);
   wisol.RST();
   
-  delay(5000);
-   digitalWrite(RXLED,LOW);
+  delay(15000);
    SerialMon.println("");
    SerialMon.print(F("REPETIDOR V0.1"));
    SerialMon.print(F(" | ID: "));
    SerialMon.println(wisol.ID());
    delay(1000);
-   digitalWrite(RXLED,HIGH);
    Nro_elementos = sizeof(id_local_device_registre)/4 ; //contar la cantidad de elementos (4bytes =32bytes)
    SerialMon.print(F("DISP. REG #")); SerialMon.print(Nro_elementos); SerialMon.println(F(" :"));
    
    for(uint8_t i=0;i<Nro_elementos; i++){
       SerialMon.println(id_local_device_registre[i],HEX); //muestra toda la lista      
  }
-  
+  ledrojo(false);
+  ledazul(false);
 
  // TinyGsmAutoBaud(SerialAT, GSM_AUTOBAUD_MIN, GSM_AUTOBAUD_MAX);
   SerialAT.begin(19200); //Serial MODEM SIM800L GPRS
   delay(4000);
-
+  ledrojo(true);
+  ledazul(true);
   // Restart takes quite some time
   // To skip it, call init() instead of restart()
   SerialMon.println(F("\n\r[INIT GPRS]"));
@@ -160,6 +182,7 @@ void setup() {
   if (!modem.waitForNetwork(240000L)) {
     SerialMon.println(F("[NO NTWRK]"));
     delay(10000);
+    SerialMon.println(F("[REBOOT]"));
     //digitalWrite(RXLED,HIGH);
     resetSoftware();
     return;
@@ -173,6 +196,7 @@ void setup() {
     SerialMon.println(F("[err GPRS]"));
     delay(10000);
     //digitalWrite(RXLED,HIGH);
+    SerialMon.println(F("[REBOOT]"));
     resetSoftware();
     return;
   }
@@ -180,31 +204,64 @@ void setup() {
   if (modem.isGprsConnected()) { SerialMon.println(F("[GPRS CONN!]")); }
 
 delay(2000);
+IPAddress local = modem.localIP();
+DBG("IP:", local);
+String imsi = modem.getIMSI();
+DBG("IMSI:", imsi);
 
-  SerialAT.print(F("AT+HTTPINIT\r\n"));
-  SerialMon.print(F("AT+HTTPINIT\r\n"));
-  delay(25);
-  SerialAT.print(F("AT+HTTPPARA=\"CID\",1\r\n"));
-  SerialMon.print(F("AT+HTTPPARA=\"CID\",1\r\n"));
-  delay(25);
-  SerialAT.print(F("AT+HTTPPARA=\"URL\",\"back2.teca.pe/SFM_repeater\"\r\n"));
-  SerialMon.print(F("AT+HTTPPARA=\"URL\",\"back2.teca.pe/SFM_repeater\"\r\n"));
-  delay(25);
-  SerialAT.print(F("AT+HTTPPARA=\"CONTENT\",\"application/json\"\r\n"));
-  SerialMon.print(F("AT+HTTPPARA=\"CONTENT\",\"application/json\"\r\n"));
-  delay(25);
-  digitalWrite(RXLED,HIGH);
 
+
+//  SerialAT.print(F("AT+HTTPINIT\r\n"));
+//  SerialMon.print(F("AT+HTTPINIT\r\n"));
+//  delay(25);
+//  SerialAT.print(F("AT+HTTPPARA=\"CID\",1\r\n"));
+//  SerialMon.print(F("AT+HTTPPARA=\"CID\",1\r\n"));
+//  delay(25);
+//  SerialAT.print(F("AT+HTTPPARA=\"URL\",\"back2.teca.pe/SFM_repeater\"\r\n"));
+//  SerialMon.print(F("AT+HTTPPARA=\"URL\",\"back2.teca.pe/SFM_repeater\"\r\n"));
+//  delay(25);
+//  SerialAT.print(F("AT+HTTPPARA=\"CONTENT\",\"application/json\"\r\n"));
+//  SerialMon.print(F("AT+HTTPPARA=\"CONTENT\",\"application/json\"\r\n"));
+//  delay(25);
+  ledrojo(false);
+  ledazul(false);
 }
 
 void loop() {
+  // Make sure we're still registered on the network
+  if (!modem.isNetworkConnected()) {
+    SerialMon.println(F("Network disconnected"));
+    if (!modem.waitForNetwork(180000L, true)) {
+      SerialMon.println(" fail");
+      delay(10000);
+      return;
+    }
+    if (modem.isNetworkConnected()) {
+      SerialMon.println(F("Network re-connected"));
+    }
 
+    // and make sure GPRS/EPS is still connected
+    if (!modem.isGprsConnected()) {
+      SerialMon.println(F("GPRS disconnected!"));
+      SerialMon.print(F("Connecting to "));
+      SerialMon.print(apn);
+      if (!modem.gprsConnect(apn, gprsUser, gprsPass)) {
+        SerialMon.println(" fail");
+        delay(10000);
+        return;
+      }
+      if (modem.isGprsConnected()) { SerialMon.println("GPRS reconnected"); }
+    }
+  }
+
+  
    String rec = wisol.command(F("AT$RL")); 
    //String rec ;
    //Serial.print("recibido: ");
    //Serial.println(rec);
    
    if(rec.length() > 5){
+      ledrojo(true);
       char bufferRx[25];        //almacena los datos recibidos en cadena de caracteres     
       uint8_t hexBuffer[12];    //contiene los hex ya convertidos en bytes numerico  
       String str_bufferRx;
@@ -217,14 +274,15 @@ void loop() {
   
       uint32_t id = GET_UINT32(hexBuffer, BYTE8); //empezar a decodificar la data, uint32_t id;               //id del dispositivo
       bool flag_reg=0;
-  
+     
       for(uint8_t i=0;i<Nro_elementos; i++){    //Identificar ID y si esta registrado permitir retransmisión
           if(id==id_local_device_registre[i]){  
             flag_reg=1;
             SerialMon.print(id_local_device_registre[i],HEX); 
             SerialMon.print(F("->[ID REG.] HEX:"));
             SerialMon.print(str_bufferRx);  SerialMon.print(" ");
-            Restransmision_Data_http(str_bufferRx);
+           // Restransmision_Data_http(str_bufferRx);
+           Restransmision_Data_tcp(str_bufferRx);
           }
       }
       
@@ -235,53 +293,33 @@ void loop() {
       
       id=0x00;
       rec="";
+      ledrojo(false);
    } 
 
   
 }
 
-void Restransmision_Data_http(String dataHex){
-  // if (modem.isNetworkConnected()) {
-  //    SerialMon.println(F("\r\n[GPRS CONN!]")); 
-  //    }else{
-  //      SerialMon.println(F("\r\n[GPRS NoCONN..]")); 
-       
-  //    }
 
-  //SerialMon.println(F("HTTP REQ..."));
+
+void Restransmision_Data_tcp(String dataHex){
   wisol.RST();
-  digitalWrite(RXLED,LOW);
+  ledazul(true);
   String sfm_id = wisol.ID();
   sfm_id.remove(sfm_id.length()-1);
-  uint8_t nbyets_=sfm_id.length();
+  //uint8_t nbyets_=sfm_id.length();
   //SerialMon.print(F("Nro bytes id: ")); SerialMon.println(nbyets_);
 
   //dataHex = "{\"idRep\":\"00346738\",\"data\":\"" + dataHex + "\"}\r\n";
   //dataHex = "{'idRep':'00346738','data':'" + dataHex + "'}\r\n";
-   dataHex = "{\"idRep\":\""+ sfm_id+"\",\"data\":\""+dataHex+"\"}\r\n";
-   uint8_t nbyets=dataHex.length();
+   String dataHex_ = "{\"idRep\":\""+ sfm_id+"\",\"data\":\""+dataHex+"\"}";
+   //uint8_t nbyets=dataHex.length();
   //SerialMon.print(F("Nro bytes: ")); SerialMon.println(nbyets);
-
-  String len="AT+HTTPDATA=" + String(nbyets) + ",10000\r\n" ;
   
-  //SerialAT.print(F("AT+HTTPDATA=56,10000\r\n"));
-  //SerialMon.print(F("AT+HTTPDATA=56,10000\r\n"));
-  SerialAT.print(len);
-  SerialMon.print(len);
-  delay(25);
-  SerialAT.print(dataHex);
-  SerialMon.print(dataHex);
-  delay(25);
-  SerialAT.print(F("AT+HTTPACTION=1\r\n"));
-  SerialMon.print(F("AT+HTTPACTION=1\r\n"));
-  delay(2000);
-  //SerialAT.print(F("AT+HTTPREAD\r\n"));
-  //SerialMon.print(F("AT+HTTPREAD\r\n"));
-  //delay(3000);
-  //SerialAT.print("AT+HTTPTERM\r\n");
-  //SerialMon.print("AT+HTTPTERM\r\n");
-  //SerialAT.flush();
-  SerialMon.println();
-  digitalWrite(RXLED,HIGH);
+client.connect("back2.teca.pe", 1692);
+client.print(dataHex_);
+delay(2000); 
+client.stop();
 
+  SerialMon.println();
+  ledazul(false);
 }

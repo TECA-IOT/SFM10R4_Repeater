@@ -1,0 +1,18 @@
+//CONFIGURAR MONITOR SERIE COMO 9600 BAUDIOS Y NUEVA LINEAS
+#include <SoftwareSerial.h>
+SoftwareSerial mySerial(D2, D1); // RX, TX
+
+void setup() {
+  Serial.begin(9600);
+  mySerial.begin(9600);
+}
+
+void loop() {
+   while (Serial.available()) {
+    mySerial.write(Serial.read());
+  }
+  while (mySerial.available()) {
+    Serial.write(mySerial.read());
+  }
+  
+}
