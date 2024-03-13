@@ -306,7 +306,7 @@ void setup() {
 
   modem.gprsConnect(apn, gprsUser, gprsPass);
   
-  SerialMon.print(F("[NTWRK] "));
+  SerialMon.print(F("[NTWRK]"));
   if (!modem.waitForNetwork(240000L)) {
     SerialMon.println(F("[ err]"));
     delay(10000);
@@ -375,7 +375,7 @@ void loop() {
       STS_NWRK = 1;
       ledrojo(false); ledrojo(false); 
     }else{
-        SerialMon.print(F("[NWRK]"));
+        SerialMon.print(F("[ no NWRK]"));
         STS_NWRK = 0;
         if(!modem.waitForNetwork(180000L)) {
           SerialMon.println(F(" rbt"));
